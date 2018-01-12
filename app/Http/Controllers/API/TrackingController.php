@@ -42,7 +42,9 @@ class TrackingController extends Controller
 
     	$busId = $bus->bus_id;
 
-    	$schedules = $this->schedules->where('bus_id',$busId)->whereDate('real_active_date',date('Y-m-d'))->first();
+    	$schedules = $this->schedules->where('bus_id',$busId)
+    								 ->whereDate('real_active_date',date('Y-m-d'))
+    								 ->first();
     	if(!isset($schedules)){
     		return response()->json([
     			'status' => false,
@@ -67,7 +69,7 @@ class TrackingController extends Controller
     		// fail 
     		return response()->json([
     			'status' => false,
-    			'message' =>'',
+    			'message' =>'failed checking save',
     			'data' => $newCheckpoint
     		]);
     	}
