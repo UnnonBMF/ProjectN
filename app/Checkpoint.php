@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Checkpoint extends Model
 {
     //
+
+    protected $primaryKey = 'check_id'; // or null
+
     protected $table = 'checkpoint_field';
 
     public $timestamps = false;
@@ -16,5 +19,5 @@ class Checkpoint extends Model
      *
      * @var array
      */
-    protected $fillable = ['latitude' , 'longitude' , 'schedules_id' , 'map_id'];
+    protected $fillable = ['latitude' , 'longitude' , 'schedules_id' , 'map_id','duration','distance'];
 }

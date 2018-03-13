@@ -18,4 +18,14 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 
+
+Route::get('/tracking', function(){
+	return response()->json(['a' => 'b']);
+} );
+
 Route::post('/tracking', 'API\TrackingController@store' );
+
+Route::post('/account', 'API\LoginController@store' );
+
+Route::post('/report', 'API\ReportController@store' );
+

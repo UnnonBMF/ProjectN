@@ -26,5 +26,10 @@ Route::get('/check', function () {
     ]);
 });
 
-Route::get('/tracking', 'TrackingController@index');
+Route::get('/tracking', 'TrackingController@index')->name('tracking.index');
 
+Route::get('/tracking/{bus_id}', 'TrackingController@show')->name('tracking.show');
+
+Route::get('/tracking/json/all', 'TrackingController@json')->name('tracking.json');
+
+Route::get('/tracking/{check_id}/update', 'TrackingController@update')->name('tracking.update');

@@ -1,37 +1,180 @@
 @extends('welcome')
-
-
 @section('content')
-   <style>
-       #map {
-        height:100vh;
-        width: 100%;
-       }
-    </style>
-    <div id="map"></div>
+<style>
+   #map {
+    height:100vh;
+   /* width: 100%;*/
+   }
+   .duration{
+    position: absolute;
+    bottom: 10px;
+    z-index: 999;
+    padding: 15px;
+   }
+   .my-icon{
+     position: absolute;
+     right: 10px;
+      bottom: 10px;
+      z-index: 999;
+   }
+</style>  
+<div class="row">
+  <div class="col-sm-2" id="nav">
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link text-center"  href="{{ route('tracking.index') }}/1">BUS 1</a></li>
+      <li class="nav-item"><a class="nav-link text-center"  href="{{ route('tracking.index') }}/2">BUS 2</a></li>
+      <li class="nav-item"><a class="nav-link text-center"  href="{{ route('tracking.index') }}/3">BUS 3</a></li>
+      <li class="nav-item"><a class="nav-link text-center"  href="{{ route('tracking.index') }}/4">BUS 4</a></li>
+      <li class="nav-item"><a class="nav-link text-center"  href="{{ route('tracking.index') }}/5">BUS 5</a></li>
+      <li class="nav-item"><a class="nav-link text-center"  href="#" onclick="initMapAll()" >All Bus</a></li>
+    </ul>
+    <div class="duration">
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link disabled" href="#" id='duration'></a></li>
+        <li class="nav-item"><a class="nav-link disabled" href="#" id='distance'></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="map" class="col-sm-10">
+    
+  </div>
+ {{--  <div class="my-icon">
+    <button type="button" onclick="MenuToggle()"></button>">
+      <span class="oi oi-grid-two-up">aa</span>
+    </button>
+  </div> --}}
+</div>
+
+  <script type="text/javascript">
+    var MenuToggle = function(){
+      $('#nav').toggle("slow", function() {
+        // Animation complete.
+      });
+    }
+  </script>
    
-   <script type="text/javascript">
+  <script type="text/javascript">
+      var flightPath;
+      var flightPlanCoordinates;
+      var last;
+      var markerLast;
+      var center;
+      var map;
+      var zoom;
+
+      var distance = $('#distance');
+      var duration = $('#duration');
+
       function initMap() {
       	//13.876571, 100.411027
-        var center = {lat: 13.876571, lng: 100.411027};
-        var map = new google.maps.Map(document.getElementById('map'), {
-          zoom: 15,
-          center: center
-        });
+        
+        center = {lat: 13.739965 , lng: 100.538277 };
 
+        @if(count($data) > 0)
+          <?php $first = $data->first(); ?>
+           center = {lat: {{ $first->latitude }} , lng: {{ $first->longitude }} };
+        @endif
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 13,
+          center:center
+        });
+         @if(count($data) > 0)
         var marker = new google.maps.Marker({
-          position: center,
-          map: map
+            position: center,
+            title:'Start',
+            label: 'S',
+            map: map
         });
+        @endif
 
-
-        var flightPlanCoordinates = [
-           {lat: 13.874458, lng: 100.412022},
-           {lat: 13.876171, lng: 100.409840},
-           {lat: 13.880360, lng: 100.409172},
-           {lat: 13.878609, lng: 100.409364}
+        flightPlanCoordinates = [
+           @foreach($data as $item)
+            { lat: {{ $item->latitude }}, lng: {{ $item->longitude }} , id: {{ $item->check_id or '' }} },
+           @endforeach
         ];
 
+        flightPath = new google.maps.Polyline({
+          path: flightPlanCoordinates,
+          geodesic: true,
+          strokeColor: '#FF0000',
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+
+        flightPath.setMap(map);
+
+        @if(count($data)>0)
+        <?php 
+          $last = $data->last();
+        ?>
+
+        last = {lat: {{ $last->latitude }} , lng: {{ $last->longitude }} , id: {{ $item->check_id or '' }}  }
+        duration.html('{{ $last->duration }}');
+        distance.html('{{ $last->distance }}');
+        markerLast = new google.maps.Marker({
+          position: last ,
+           label: 'L',
+           title:'Last',
+          map: map
+        });
+        @endif
+
+      }
+
+      setInterval(function () {
+          updateLatLng(last , map , markerLast , duration , distance);
+      },(1000*30)*1);
+
+      function updateLatLng(last, map, markerLast, duration , distance){
+        var id = last.id;
+        $.ajax({
+          url: '{{ route('tracking.index') }}/'+id+'/update',
+          method: 'GET',
+          success : function(data){
+            console.log('success', data);
+            if(data == null){
+              return
+            }   
+            addLatLng(data, map, markerLast, duration , distance);
+          },
+          error: function(err){
+            console.log('error' , err);
+          }
+        })
+      }
+
+        // Handles click events on a map, and adds a new point to the Polyline.
+      function addLatLng(locations , map, markerLast, duration , distance) {
+        if(locations.length == 0) {
+          return
+        }
+
+        var lastindex = locations.length-1;
+        locations.forEach(function(location , index){
+          // var center = {lat: 13.739965 , lng: 100.538277 };
+          var point = {lat: parseFloat(location.latitude) , lng: parseFloat(location.longitude) , id: parseInt(location.check_id)};
+
+          flightPlanCoordinates.push(point);
+
+          if(index == lastindex){
+            last = {lat: parseFloat(location.latitude) , lng: parseFloat(location.longitude), id: parseInt(location.check_id)};
+            center = {lat: parseFloat(location.latitude) , lng: parseFloat(location.longitude), id: parseInt(location.check_id)};
+            duration.html(location.duration);
+            distance.html(location.distance);
+          }
+        })
+
+        // zoom = map.getZoom();
+        // var map = new google.maps.Map(document.getElementById('map'), {
+        //   zoom: zoom,
+        //   center:center
+        // });
+
+
+        // Because path is an MVCArray, we can simply append a new coordinate
+        // and it will automatically appear.
         var flightPath = new google.maps.Polyline({
           path: flightPlanCoordinates,
           geodesic: true,
@@ -42,51 +185,62 @@
 
         flightPath.setMap(map);
 
-
-
-        var marker = new google.maps.Marker({
-          position:   {lat: 13.874448, lng: 100.413860},
-           label: 'A',
-           title:'This is title',
-          map: map
-        });
-
+        markerLast.setPosition(last);
+       
       }
-    </script>
 
-<script type="text/javascript">
+  </script>
+  <!-- All -->
+  <script type="text/javascript">
+    var map;
+    var polylines = [];
+    function initMapAll() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center : {lat: 13.739965 , lng: 100.538277 },
+        mapTypeId: 'terrain',
+        zoom: 13,
+      });
 
-      // This example creates a 2-pixel-wide red polyline showing the path of
-      // the first trans-Pacific flight between Oakland, CA, and Brisbane,
-      // Australia which was made by Charles Kingsford Smith.
-      // function initMap() {
-      //   var map = new google.maps.Map(document.getElementById('map'), {
-      //     zoom: 3,
-      //     center: {lat: 0, lng: -180},
-      //     mapTypeId: 'terrain'
-      //   });
+      $.ajax({
+         url: '{{ route('tracking.json') }}',
+          method: 'GET',
+          success : function(data){
+            //console.log('success', data);
+            if(data == null){
+              return
+            }   
+            addLatLngAll(data, map, polylines);
+          },
+          error: function(err){
+            console.log('error' , err);
+          }
+      });
+    }
 
-      //   var flightPlanCoordinates = [
-      //     {lat: 37.772, lng: -122.214},
-      //     {lat: 21.291, lng: -157.821},
-      //     {lat: -18.142, lng: 178.431},
-      //     {lat: -27.467, lng: 153.027}
-      //   ];
-      //   var flightPath = new google.maps.Polyline({
-      //     path: flightPlanCoordinates,
-      //     geodesic: true,
-      //     strokeColor: '#FF0000',
-      //     strokeOpacity: 1.0,
-      //     strokeWeight: 2
-      //   });
+    function addLatLngAll(data, map, polylines){
+      
+      data.forEach(function(ele,index){
+        console.log('index' , index , 'ele', ele);
+        polylines[index] = new google.maps.Polyline({
+          path: ele.checkpoints,
+          geodesic: true,
+          strokeColor: ele.bus_data.color,
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+      })
 
-      //   flightPath.setMap(map);
-      // }
- 	
-    </script>
+      data.forEach(function(ele,index){
+         polylines[index].setMap(map);
+      })
 
-     <script  async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuppx3pVRSTT42JcTKumOxK0AMcD3ATNg&callback=initMap">
-    </script>
+      map.panTo(data[0].checkpoints[0]);
+    }
+
+  </script>
+
+  <script  async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuppx3pVRSTT42JcTKumOxK0AMcD3ATNg&callback=initMap">
+  </script>
 
 @endsection

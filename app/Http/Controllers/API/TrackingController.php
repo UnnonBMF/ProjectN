@@ -8,7 +8,8 @@ use App\Checkpoint;
 use App\User;
 use App\Bus;
 use App\Schedules;
-
+use App\Map;
+use GuzzleHttp\Client;
 class TrackingController extends Controller
 {
 
@@ -16,14 +17,16 @@ class TrackingController extends Controller
 	private $user;
 	private $bus;
 	private $schedules;
+    private $map;
 
 
-	public function __construct(Checkpoint $checkpoint,User $user,Bus $bus,Schedules $schedules)
+	public function __construct(Checkpoint $checkpoint,User $user,Bus $bus,Schedules $schedules,Map $map)
 	{
 		$this->checkpoint = $checkpoint;
 		$this->user = $user;
 		$this->bus = $bus;
 		$this->schedules = $schedules;
+        $this->map = $map;
 	}
 
     //
@@ -53,14 +56,18 @@ class TrackingController extends Controller
     		]);
     	}
 
+        $mapdata = $this->map->where('map_id', $schedules->map_id)->first();
+        $distance = $this->distancematrix($mapdata,$request->input('latitude'),$request->input('longitude'));
+        //return response()->json( $distance);
 
     	$requestAll = $request->all();
     	$requestAll['map_id'] = $schedules->map_id;
     	$requestAll['schedules_id'] = $schedules->schedules_id;
+        $requestAll['duration'] = $distance['duration'];
+        $requestAll['distance'] = $distance['distance'];
+
 
     	// match data to model
-
-
     	$newCheckpoint = $this->checkpoint->fill($requestAll);
 
     	// save data into database
@@ -82,5 +89,29 @@ class TrackingController extends Controller
 
     }
 
+    private function distancematrix($map,$latitude,$longitude){
+
+        $output = [];
+        $client = new Client([]);
+
+        $request = new \GuzzleHttp\Psr7\Request('GET', 'https://maps.googleapis.com/maps/api/distancematrix/json');
+        $response = $client->send($request, ['timeout' => 2,
+                'query'=> [
+                    'origins' =>$latitude.','.$longitude,
+                    'destinations' =>$map->destination,
+                    'key'=> 'AIzaSyCFHiWh9Ki23zYMDAN2u3At8qyEqRqgIKo'
+                ]
+        ]);
+
+        $body = $response->getBody();
+
+        $data = json_decode($body);
+
+        $output['distance'] = $data->rows[0]->elements[0]->distance->text;
+        $output['duration'] =$data->rows[0]->elements[0]->duration->text;
+        return $output;
+    }
+
 
 }
+    

@@ -17,4 +17,9 @@ class Schedules extends Model
      * @var array
      */
     protected $fillable = ['start' , 'goal' , 'map_id' , 'bus_id' , 'real_active_date'];
+
+    public function bus()
+    {
+        return $this->belongsTo(\App\Bus::class , 'bus_id' , 'bus_id');
+    }
 }
