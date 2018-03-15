@@ -194,7 +194,9 @@ $last = $data->last();
   <script type="text/javascript">
     var map;
     var polylines = [];
+    var markers = [];
     var last = 0;
+    
 
     function initMapAll() {
       map = new google.maps.Map(document.getElementById('map'), {
@@ -202,11 +204,13 @@ $last = $data->last();
         mapTypeId: 'terrain',
         zoom: 13,
       });
+      markers = [];
+      polylines=[];
 
-      getDataAll(last, map, polylines);
+      getDataAll(last, map, polylines , markers);
     }
 
-    function getDataAll(last, map, polylines){
+    function getDataAll(last, map, polylines, markers){
       $.ajax({
          url: '{{ route('tracking.json') }}?id='+last,
           method: 'GET',
@@ -214,10 +218,10 @@ $last = $data->last();
             if(resp == null) return
             last = resp.last;
             setInterval(function () {
-              updateDataAll(last, map, polylines);
+              updateDataAll(last, map, polylines, markers);
             },(1000*30)*1);
 
-            displayAll(resp.data, map, polylines);
+            displayAll(resp.data, map, polylines, markers);
           },
           error: function(err){
             console.log('error' , err);
@@ -225,14 +229,14 @@ $last = $data->last();
       });
     }
 
-    function updateDataAll(last, map, polylines){
+    function updateDataAll(last, map, polylines , markers){
       $.ajax({
          url: '{{ route('tracking.json') }}?id='+last,
           method: 'GET',
           success : function(resp){
             if(resp == null) return
             last = resp.last;
-            displayAll(resp.data, map, polylines);
+            displayAll(resp.data, map, polylines , markers);
           },
           error: function(err){
             console.log('error' , err);
@@ -240,9 +244,10 @@ $last = $data->last();
       });
     }
 
-    function displayAll(data, map, polylines){
+    function displayAll(data, map, polylines, markers){
+      console.log('displayAll',polylines , markers)
+      var base_image = '{{asset('/')}}';
       data.forEach(function(ele,index){
-        console.log('index' , index , 'ele', ele);
         polylines[index] = new google.maps.Polyline({
           path: ele.checkpoints,
           geodesic: true,
@@ -250,6 +255,22 @@ $last = $data->last();
           strokeOpacity: 1.0,
           strokeWeight: 2
         });
+
+        //set marker
+        var last_position = ele.checkpoints.length-1;
+
+        if(markers[index] == null){
+          console.log('if', markers[index])
+           markers[index] = new google.maps.Marker({
+            position: ele.checkpoints[last_position],
+            icon: base_image+ele.bus_data.marker,
+            map: map
+          });
+         }else{
+           console.log('else', markers[index])
+            markers[index].setPosition(ele.checkpoints[last_position]);
+         }
+       
       })
 
       data.forEach(function(ele,index){

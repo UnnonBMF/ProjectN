@@ -44,7 +44,6 @@ class TrackingController extends Controller {
 	 */
 	public function json(Request $request) {
 		$last_id = 0;
-		$id = (int) $request->input('id');
 		$list = [];
 
 		$schedules = $this->schedules
@@ -56,12 +55,6 @@ class TrackingController extends Controller {
 				->where('schedules_id', $schedule->schedules_id)
 				->orderBy('check_id', 'asc')->get();
 
-			$last = $this->checkpoint
-				->where('schedules_id', $schedule->schedules_id)
-				->orderBy('check_id', 'desc')->first();
-
-			array_push($list, $last->check_id);
-
 			foreach ($data as $key => $item) {
 				$item->lat = floatval($item->latitude);
 				$item->lng = floatval($item->longitude);
@@ -72,11 +65,7 @@ class TrackingController extends Controller {
 			$schedule->bus_data = $schedule->bus;
 
 		}
-
-		$list = array_sort($list);
-
-		$last_id = last($list);
-
+        
 		return response()->json(['data' => $schedules, 'last' => $last_id]);
 	}
 
