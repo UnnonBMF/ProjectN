@@ -129,6 +129,8 @@ $last = $data->last();
 
       function updateLatLng(last, map, markerLast, duration , distance){
         var id = last.id;
+        if(id==null)return;
+        console.log('updateLatLng',id)
         $.ajax({
           url: '{{ route('tracking.index') }}/'+id+'/update',
           method: 'GET',
