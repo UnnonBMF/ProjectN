@@ -17,7 +17,7 @@
       bottom: 10px;
       z-index: 999;
    }
-</style>  
+</style>
 <div class="row">
   <div class="col-sm-2" id="nav">
     <ul class="nav flex-column">
@@ -37,7 +37,7 @@
   </div>
 
   <div id="map" class="col-sm-10">
-    
+
   </div>
  {{--  <div class="my-icon">
     <button type="button" onclick="MenuToggle()"></button>">
@@ -53,7 +53,7 @@
       });
     }
   </script>
-   
+
   <script type="text/javascript">
       var flightPath;
       var flightPlanCoordinates;
@@ -68,11 +68,11 @@
 
       function initMap() {
       	//13.876571, 100.411027
-        
+
         center = {lat: 13.739965 , lng: 100.538277 };
 
         @if(count($data) > 0)
-          <?php $first = $data->first(); ?>
+          <?php $first = $data->first();?>
            center = {lat: {{ $first->latitude }} , lng: {{ $first->longitude }} };
         @endif
 
@@ -106,9 +106,9 @@
         flightPath.setMap(map);
 
         @if(count($data)>0)
-        <?php 
-          $last = $data->last();
-        ?>
+        <?php
+$last = $data->last();
+?>
 
         last = {lat: {{ $last->latitude }} , lng: {{ $last->longitude }} , id: {{ $item->check_id or '' }}  }
         duration.html('{{ $last->duration }}');
@@ -136,7 +136,7 @@
             console.log('success', data);
             if(data == null){
               return
-            }   
+            }
             addLatLng(data, map, markerLast, duration , distance);
           },
           error: function(err){
@@ -186,7 +186,7 @@
         flightPath.setMap(map);
 
         markerLast.setPosition(last);
-       
+
       }
 
   </script>
@@ -194,6 +194,8 @@
   <script type="text/javascript">
     var map;
     var polylines = [];
+    var last = 0;
+
     function initMapAll() {
       map = new google.maps.Map(document.getElementById('map'), {
         center : {lat: 13.739965 , lng: 100.538277 },
@@ -201,15 +203,21 @@
         zoom: 13,
       });
 
+      getDataAll(last, map, polylines);
+    }
+
+    function getDataAll(last, map, polylines){
       $.ajax({
-         url: '{{ route('tracking.json') }}',
+         url: '{{ route('tracking.json') }}?id='+last,
           method: 'GET',
-          success : function(data){
-            //console.log('success', data);
-            if(data == null){
-              return
-            }   
-            addLatLngAll(data, map, polylines);
+          success : function(resp){
+            if(resp == null) return
+            last = resp.last;
+            setInterval(function () {
+              updateDataAll(last, map, polylines);
+            },(1000*30)*1);
+
+            displayAll(resp.data, map, polylines);
           },
           error: function(err){
             console.log('error' , err);
@@ -217,8 +225,22 @@
       });
     }
 
-    function addLatLngAll(data, map, polylines){
-      
+    function updateDataAll(last, map, polylines){
+      $.ajax({
+         url: '{{ route('tracking.json') }}?id='+last,
+          method: 'GET',
+          success : function(resp){
+            if(resp == null) return
+            last = resp.last;
+            displayAll(resp.data, map, polylines);
+          },
+          error: function(err){
+            console.log('error' , err);
+          }
+      });
+    }
+
+    function displayAll(data, map, polylines){
       data.forEach(function(ele,index){
         console.log('index' , index , 'ele', ele);
         polylines[index] = new google.maps.Polyline({
@@ -234,7 +256,7 @@
          polylines[index].setMap(map);
       })
 
-      map.panTo(data[0].checkpoints[0]);
+      //map.panTo(data[0].checkpoints[0]);
     }
 
   </script>
